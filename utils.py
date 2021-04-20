@@ -1,11 +1,12 @@
-import discord
-from discord.ext import commands
 import logging
 import sys
 import time
-import mysql
-from typing import Any, Callable, Optional, Coroutine
+from typing import Any, Callable, Coroutine, Optional
 
+import discord
+import mysql
+from discord.ext import commands
+from discord_slash import SlashCommand
 
 OUTAGE_REASON = {
     'fr': "Un des datacenters de notre hébergeur OVH a pris feu, rendant ,inaccessible le serveur et toutes ses données. Une vieille sauvegarde de la base de donnée sera peut-être utilisée ultérieurement. Plus d'informations sur https://zbot.statuspage.io/",
@@ -83,20 +84,24 @@ class zbot(commands.bot.AutoShardedBot):
         # we now initialize the bot class
         super().__init__(command_prefix=get_prefix, case_insensitive=case_insensitive,
                          status=status, allowed_mentions=ALLOWED, intents=intents)
-        self.database_online = database_online # if the mysql database works
-        self.beta = beta # if the bot is in beta mode
-        self.database_keys = dict() # credentials for the database
-        self.log = logging.getLogger("runner") # logs module
-        self.dbl_token = dbl_token # token for Discord Bot List
-        self._cnx = [[None, 0], [None, 0], [None, 0]] # database connections
-        self.xp_enabled: bool = True # if xp is enabled
-        self.rss_enabled: bool = True # if rss is enabled
-        self.alerts_enabled: bool = True # if alerts system is enabled
-        self.internal_loop_enabled: bool = False # if internal loop is enabled
-        self.zws = "​"  # here's a zero width space
-        self.others = dict() # other misc credentials
-        self.zombie_mode: bool = zombie_mode # if we should listen without sending any message
+        # declare slash commands client
+        self.slashClient = SlashCommand(self)
+        self.database_online = database_online          # if the mysql database works
+        self.beta = beta                                # if the bot is in beta mode
+        self.database_keys = dict()                     # credentials for the database
+        self.log = logging.getLogger("runner")          # logs module
+        self.dbl_token = dbl_token                      # token for Discord Bot List
+        self._cnx = [[None, 0], [None, 0], [None, 0]]   # database connections
+        self.xp_enabled: bool = True                    # if xp is enabled
+        self.rss_enabled: bool = True                   # if rss is enabled
+        self.alerts_enabled: bool = True                # if alerts system is enabled
+        self.internal_loop_enabled: bool = False        # if internal loop is enabled
+        self.zws = "​"                                   # here's a zero width space
+        self.others = dict()                            # other misc credentials
+        # if we should listen without sending any message
+        self.zombie_mode: bool = zombie_mode
     
+    # commands allowed even in zombie mode
     allowed_commands = ("eval", "add_cog", "del_cog")
 
     @property
