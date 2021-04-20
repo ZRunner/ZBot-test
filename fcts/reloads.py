@@ -59,6 +59,8 @@ class Reloads(commands.Cog):
                 reloaded_cogs.append(cog)
             if cog == 'utilities':
                 await self.bot.get_cog('Utilities').on_ready()
+            elif cog == "slash":
+                await self.bot.get_cog('Slash').on_ready()
         if len(reloaded_cogs) > 0:
             await ctx.send("These cogs has successfully reloaded: {}".format(", ".join(reloaded_cogs)))
             ctx.bot.get_cog('Info').codelines = await ctx.bot.get_cog('Info').count_lines_code()

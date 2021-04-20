@@ -58,6 +58,7 @@ def main():
                       'fcts.rss',
                       'fcts.s_backups',
                       'fcts.servers',
+                      'fcts.slash',
                       'fcts.timers',
                       'fcts.timeutils',
                       'fcts.translations',
