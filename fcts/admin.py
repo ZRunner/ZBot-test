@@ -1,26 +1,30 @@
-import discord
-from discord.ext import commands
-
-import time
-import sys
-import traceback
+import asyncio
+import copy
 import datetime
+import inspect
+import io
+import json
+import operator
 import os
 import shutil
-import asyncio
-import inspect
-import typing
-import io
+import sys
 import textwrap
-import copy
-import operator
-import mysql
-import json
-import speedtest
+import time
+import traceback
+import typing
 from contextlib import redirect_stdout
 from glob import glob
+
+import discord
+import mysql
+import speedtest
+from discord.ext import commands
+from discord_slash.utils.manage_commands import (add_slash_command,
+                                                 get_all_commands,
+                                                 remove_slash_command)
+from utils import MyContext, UserFlag, zbot
+
 from fcts import reloads
-from utils import zbot, MyContext, UserFlag
 
 
 def cleanup_code(content: str):
@@ -935,6 +939,45 @@ Cette option affecte tous les serveurs"""
             await ctx.bot.get_cog('Utilities').add_check_reaction(ctx.message)
         except Exception as e:
             await self.bot.get_cog('Errors').on_command_error(ctx,e)
+    
+    @main_msg.group(name="slash")
+    async def main_slash(self, ctx: MyContext):
+        """Manage slash commands"""
+        pass
+
+    @main_slash.command(name="add")
+    async def slash_add(self, ctx: MyContext, guild: typing.Optional[discord.Guild], name: str, *, description: str=None):
+        """Add a slash command"""
+        name = name.lower()
+        res = await add_slash_command(self.bot.user.id, self.bot.http.token, guild.id if guild else None, name, description)
+        await ctx.send(f"Command {res['name']} with description {res['description']} added {'for guild '+res['guild_id'] if res['guild_id'] else ''}!")
+    
+    @main_slash.command(name="remove")
+    async def slash_remove(self, ctx: MyContext, guild: typing.Optional[discord.Guild], cmd_name: str):
+        """Remove a slash command"""
+        if not ctx.view.eof:
+            await ctx.send("Unknown guild")
+            return
+        cmds: list[dict] = await get_all_commands(self.bot.user.id, self.bot.http.token, guild.id if guild else None)
+        cmd = [c for c in cmds if c['name'] == cmd_name or c['id'] == cmd_name]
+        if len(cmd) == 0:
+            await ctx.send("Unknown command")
+            return
+        elif len(cmd) > 1:
+            await ctx.send("2 commandes trouvées (ou plus)")
+            return
+        cmd = cmd[0]
+        await remove_slash_command(self.bot.user.id, self.bot.http.token, guild.id if guild else None, cmd['id'])
+        await ctx.send(f"Command {cmd['name']} with description {cmd['description']} deleted {'for guild '+cmd['guild_id'] if cmd['guild_id'] else ''}!")
+
+    @main_slash.command(name="list")
+    async def slash_list(self, ctx: MyContext, guild: typing.Optional[discord.Guild]):
+        """List all slash commands"""
+        cmds = await get_all_commands(self.bot.user.id, self.bot.http.token, guild.id if guild else None)
+        title = f"Commands for guild {guild.name} ({guild.id}):\n" if guild else "Global commands:\n"
+        txt = "\n".join([f"ID {c['id']} | Name {c['name']} | Description {c['description']}" for c in cmds])
+        await ctx.send(title + txt)
+    
 
 def setup(bot):
     bot.add_cog(Admin(bot))
