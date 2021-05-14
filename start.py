@@ -155,13 +155,6 @@ def main():
         emb = client.get_cog("Embeds").Embed(desc="**{}** is launching !".format(client.user.name),color=8311585).update_timestamp()
         await client.get_cog("Embeds").send([emb])
 
-
-    async def sigterm_handler(bot):
-        print("SIGTERM received. Disconnecting...")
-        await bot.logout()
-    
-    asyncio.get_event_loop().add_signal_handler(SIGTERM, lambda: asyncio.ensure_future(sigterm_handler(client)))
-
     if client.database_online:
         if len(sys.argv) > 1 and sys.argv[1] in ['1','2','3','4']:
             bot_type = sys.argv[1]
