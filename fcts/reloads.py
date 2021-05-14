@@ -1,3 +1,4 @@
+import importlib
 from discord.ext import commands
 from utils import zbot
 
@@ -50,7 +51,13 @@ class Reloads(commands.Cog):
             except ModuleNotFoundError:
                 await ctx.send("Cog {} can't be found".format(cog))
             except commands.errors.ExtensionNotLoaded :
-                await ctx.send("Cog {} was never loaded".format(cog))
+                try:
+                    fcog = importlib.import_module(cog)
+                    importlib.reload(fcog)
+                except:
+                    await ctx.send("Cog {} was never loaded".format(cog))
+                else:
+                    await ctx.send(f"Lib {cog} rechargée")
             except Exception as e:
                 await errors_cog.on_error(e,ctx)
                 await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
