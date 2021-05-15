@@ -6,7 +6,6 @@ from typing import Any, Callable, Coroutine, Optional
 import discord
 import mysql
 from discord.ext import commands
-from discord_slash import SlashCommand
 
 OUTAGE_REASON = {
     'fr': "Un des datacenters de notre hébergeur OVH a pris feu, rendant ,inaccessible le serveur et toutes ses données. Une vieille sauvegarde de la base de donnée sera peut-être utilisée ultérieurement. Plus d'informations sur https://zbot.statuspage.io/",
@@ -85,7 +84,6 @@ class zbot(commands.bot.AutoShardedBot):
         super().__init__(command_prefix=get_prefix, case_insensitive=case_insensitive,
                          status=status, allowed_mentions=ALLOWED, intents=intents)
         # declare slash commands client
-        self.slashClient = SlashCommand(self)
         self.database_online = database_online          # if the mysql database works
         self.beta = beta                                # if the bot is in beta mode
         self.database_keys = dict()                     # credentials for the database
