@@ -2,7 +2,7 @@ import typing
 from typing import Any, Callable, Coroutine
 
 from discord.ext import commands
-from libs.slash_api import SlashClient, SlashContext
+from libs.slash_api import SlashClient, SlashContext, SlashMember
 from utils import zbot
 
 
@@ -58,13 +58,22 @@ class Slash(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command_error(self, ctx, err: Exception):
         self.bot.log.error("[on_slash_command] New error:", exc_info=err)
+    
+    async def is_allowed(self, author: SlashMember) -> bool:
+        """Check if a discord User is allowed to use /add-tag or /remove-tag"""
+        return bool(author.permissions.manage_guild)
 
     async def ping(self, ctx: SlashContext):
+        """Give the websocket latency to the user"""
         await ctx.send(content=f"Pong! (`{round(self.bot.latency*1000)}`ms)")
 
     async def add_tag(self, ctx: SlashContext, name: str, answer: str):
+        """Add a new custom tag in a guild"""
         if ctx.guild_id is None:
             await ctx.send("Cette commande n'est pas disponible en MP !")
+            return
+        if not await self.is_allowed(ctx.author):
+            await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande !")
             return
         if len(name.split()) > 1:
             await ctx.send("Le nom ne peut contenir qu'un seul mot !")
@@ -86,8 +95,12 @@ class Slash(commands.Cog):
         await ctx.send(f"La commande `/{name}` a bien été ajouté avec la réponse suivante :\n{answer}")
 
     async def remove_tag(self, ctx: SlashContext, name: str):
+        """Remove a custom tag from a guild"""
         if ctx.guild_id is None:
             await ctx.send("Cette commande n'est pas disponible en MP !")
+            return
+        if not await self.is_allowed(ctx.author):
+            await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande !")
             return
         if len(name.split()) > 1:
             await ctx.send("Le nom ne peut contenir qu'un seul mot !")
