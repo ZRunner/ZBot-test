@@ -10,8 +10,7 @@ class Slash(commands.Cog):
     def __init__(self, bot: zbot):
         self.bot = bot
         self.file = "slash"
-        self.client = SlashClient(bot)
-        self.commands: dict[int, Callable[[SlashContext],
+        self.global_cmds: dict[int, Callable[[SlashContext],
                                           Coroutine[Any, Any, None]]] = dict()
         self._default_cmds = {
             'ping': self.ping,
@@ -21,6 +20,7 @@ class Slash(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        self.client = SlashClient(self.bot)
         await self.sync_cmds()
 
     @commands.Cog.listener()
@@ -28,35 +28,32 @@ class Slash(commands.Cog):
         if msg['t'] != "INTERACTION_CREATE":
             return
         cmd_id: int = int(msg['d']['data']['id'])
-        if cmd_id not in self.commands:
-            return
+        fct = self.global_cmds.get(cmd_id, self.custom_tag)
         ctx = SlashContext(msg['d'], self.client)
+        if 'options' in msg['d']['data']:
+            args: list[Any] = [await self.parse_argument(a) for a in msg['d']['data']['options']]
+        else:
+            args = list()
         try:
-            await self.commands[cmd_id](ctx)
+            await fct(ctx, *args)
         except Exception as e:
             await self.on_slash_command_error(ctx, e)
+    
+    async def parse_argument(self, arg: dict[str, str]) -> Any:
+        if arg['type'] == 3:
+            return arg['value']
+        return arg['value']
 
     async def sync_cmds(self):
         """Get slash commands from Discord API to properly catch them here"""
         # save global commands
         cmds: list[dict] = await self.client.get_all_commands()
         for cmd in cmds:
-            if cmd['id'] not in self.commands and cmd['name'] in self._default_cmds:
+            cmd_id: int = int(cmd['id'])
+            if cmd_id not in self.global_cmds and cmd['name'] in self._default_cmds:
                 self.bot.log.info(
                     f"Loading global slash command {cmd['name']}")
-                self.commands[cmd['id']] = self._default_cmds[cmd['name']]
-        # save local commands
-        for g in self.bot.guilds:
-            g_cmds: list[dict] = await self.client.get_all_commands(g.id)
-            loaded: list[str] = []
-            for cmd in g_cmds:
-                if cmd['id'] in self.commands:
-                    continue
-                self.commands[cmd['id']] = self.custom_tag
-                loaded.append(cmd['name'])
-            if len(loaded) > 0:
-                self.bot.log.info(
-                    f"Loaded local slash commands {' '.join(loaded)} for guild {g.id}")
+                self.global_cmds[cmd_id] = self._default_cmds[cmd['name']]
 
     @commands.Cog.listener()
     async def on_slash_command_error(self, ctx, err: Exception):
@@ -171,7 +168,7 @@ class Slash(commands.Cog):
         if not 200 <= r <= 204:
             self.bot.log.warn(f"[slash_command] Something went wrong when deleting custom command {ID}: Discord answered {r}")
             return False
-        self.commands.pop(ID, None)
+        self.global_cmds.pop(ID, None)
         return True
 
     async def disc_get_command(self, guildid: int, name: str) -> typing.Optional[dict]:
