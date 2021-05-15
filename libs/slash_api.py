@@ -6,8 +6,6 @@ import aiohttp
 import asyncio
 from utils import zbot
 
-# {'t': 'INTERACTION_CREATE', 's': 18, 'op': 0, 'd': {'version': 1, 'type': 2, 'token': 'aW50ZXJhY3Rpb246ODQyODY0Njc1NzAzNDg4NTEyOmFWbDFqbHpDY3BWbTdwTmVwbXV2UTVtMG03MFByMTlKaHdTZFJxc1BjSjc3Z3RDaEJIeVRzeXF0dndndURUeWNFTmhMRVIyTnVlQVdtR00xZWFXTFNqS1B1SGpIM2RvOGtEOGdMM2w5U2JlNkxEbVY5bjJQOWpvaGZIdEM0U1hW', 'member': {'user': {'username': 'Z_Speeder', 'public_flags': 0, 'id': '842823322072907776', 'discriminator': '9983', 'avatar': None}, 'roles': [], 'premium_since': None, 'permissions': '17179869183', 'pending': False, 'nick': None, 'mute': False, 'joined_at': '2021-05-14T18:00:26.886000+00:00', 'is_pending': False, 'deaf': False, 'avatar': None}, 'id': '842864675703488512', 'guild_id': '842823690999955481', 'data': {'name': 'ping', 'id': '789420712669872131'}, 'channel_id': '842823690999955483', 'application_id': '436835675304755200'}}
-
 class CustomRoute(discord.http.Route): # type: ignore
     """discord.py's Route but changed ``BASE`` to use at slash command."""
     BASE = "https://discord.com/api/v8"
@@ -234,12 +232,21 @@ class SlashCommand:
         self.id: int = int(data['id'])
         self.name: str = data['name']
 
+class SlashMember:
+    def __init__(self, data: dict[str, Any], bot: zbot):
+        self.user = discord.User(data=data["user"], state=bot._connection)
+        self.roles: list[int] = list(map(int, data['roles']))
+        self.permissions = discord.Permissions(int(data['permissions']))
+        self.nick: Optional[str] = data['nick']
+        self.is_pending: bool = data['is_pending']
+        self._data = data
+
 class SlashContext:
     def __init__(self, data: dict, client: SlashClient):
         self._data: dict[str, Any] = data
         self.bot = client.bot
         self.token: str = data['token']
-        self.author: dict[str, Any] = data['member']
+        self.author: SlashMember = SlashMember(data['member'], self.bot)
         self.guild_id: Optional[int] = int(data['guild_id']) if 'guild_id' in data else None
         self.channel_id: Optional[int] = int(data['channel_id']) if 'channel_id' in data else None
         self.interaction_id: int = int(data['id'])
