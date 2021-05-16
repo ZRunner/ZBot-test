@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Any, Optional
+from typing import Any, Optional, Union
 import discord
 import aiohttp
 import asyncio
@@ -246,7 +246,10 @@ class SlashContext:
         self._data: dict[str, Any] = data
         self.bot = client.bot
         self.token: str = data['token']
-        self.author: SlashMember = SlashMember(data['member'], self.bot)
+        if 'member' in data:
+            self.author: Union[SlashMember,discord.User] = SlashMember(data['member'], self.bot)
+        else:
+            self.author: Union[SlashMember,discord.User] = discord.User(data=data["user"], state=self.bot._connection)
         self.guild_id: Optional[int] = int(data['guild_id']) if 'guild_id' in data else None
         self.channel_id: Optional[int] = int(data['channel_id']) if 'channel_id' in data else None
         self.interaction_id: int = int(data['id'])

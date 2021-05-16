@@ -27,13 +27,17 @@ class Slash(commands.Cog):
     async def on_socket_response(self, msg: dict):
         if msg['t'] != "INTERACTION_CREATE":
             return
-        cmd_id: int = int(msg['d']['data']['id'])
-        fct = self.global_cmds.get(cmd_id, self.custom_tag)
-        ctx = SlashContext(msg['d'], self.client)
-        if 'options' in msg['d']['data']:
-            args: list[Any] = [await self.parse_argument(a) for a in msg['d']['data']['options']]
-        else:
-            args = list()
+        try:
+            cmd_id: int = int(msg['d']['data']['id'])
+            fct = self.global_cmds.get(cmd_id, self.custom_tag)
+            ctx = SlashContext(msg['d'], self.client)
+            if 'options' in msg['d']['data']:
+                args: list[Any] = [await self.parse_argument(a) for a in msg['d']['data']['options']]
+            else:
+                args = list()
+        except Exception as e:
+            await self.bot.get_cog("Errors").on_error(e)
+            return
         try:
             await fct(ctx, *args)
         except Exception as e:
@@ -69,7 +73,7 @@ class Slash(commands.Cog):
 
     async def add_tag(self, ctx: SlashContext, name: str, answer: str):
         """Add a new custom tag in a guild"""
-        if ctx.guild_id is None:
+        if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
             await ctx.send("Cette commande n'est pas disponible en MP !")
             return
         if not await self.is_allowed(ctx.author):
@@ -96,7 +100,7 @@ class Slash(commands.Cog):
 
     async def remove_tag(self, ctx: SlashContext, name: str):
         """Remove a custom tag from a guild"""
-        if ctx.guild_id is None:
+        if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
             await ctx.send("Cette commande n'est pas disponible en MP !")
             return
         if not await self.is_allowed(ctx.author):
