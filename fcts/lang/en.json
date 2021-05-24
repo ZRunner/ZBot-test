@@ -1037,7 +1037,8 @@
         "command-deleted": "The tag `/{name}` has been removed",
         "command-not-found": "No tag exists with this name!",
         "deletion-failed": "Oops, something went wrong during deletion :confused:",
-        "only-one-word": "The tag name can only contain one word!"
+        "only-one-word": "The tag name can only contain one word!",
+        "too-many-tags": "Oops, you have exceeded the number of tags allowed!"
     },
     "stats_infos": {
         "categ-0": "Category",

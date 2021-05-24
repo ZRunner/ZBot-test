@@ -1034,7 +1034,8 @@
         "command-deleted": "roger, `/{name}` has been removed :catsalute:",
         "command-not-found": "Nope, i cant find anything with dat name!",
         "deletion-failed": "Ooops, smth broke :ohno:",
-        "only-one-word": "Hey, tags can only B one word! What did u expect srly"
+        "only-one-word": "Hey, tags can only B one word! What did u expect srly",
+        "too-many-tags": "Hey no, u already have wayyyy 2 many tags!"
     },
     "stats_infos": {
         "categ-0": "Categori",

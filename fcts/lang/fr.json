@@ -1047,7 +1047,8 @@
         "command-deleted": "La commande `/{name}` a bien été supprimée",
         "command-not-found": "Aucune commande n'existe avec ce nom !",
         "deletion-failed": "Oups, quelque chose s'est mal passé lors de la suppression :confused:",
-        "only-one-word": "Le nom ne peut contenir qu'un seul mot !"
+        "only-one-word": "Le nom ne peut contenir qu'un seul mot !",
+        "too-many-tags": "Oups, vous avez dépassé le nombre de comandes autorisé !"
     },
     "stats_infos": {
         "categ-0": "Catégorie",

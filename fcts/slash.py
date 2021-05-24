@@ -2,6 +2,7 @@ import typing
 from typing import Any, Callable, Coroutine
 
 import discord
+from aiohttp.client_exceptions import ClientResponseError
 from discord.ext import commands
 from libs.slash_api import SlashClient, SlashContext, SlashMember
 from utils import zbot
@@ -85,18 +86,21 @@ class Slash(commands.Cog):
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"))
             return
         check_exists = await self.db_get_command(ctx.guild_id, name)
+        if not check_exists:
+            check_exists = await self.disc_get_command(ctx.guild_id, name)
         if check_exists is not None:
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
-        check_discord_exists = await self.disc_get_command(ctx.guild_id, name)
-        desc = "something"
         try:
-            cmd = await self.client.add_command(ctx.guild_id, name, desc)
+            cmd = await self.client.add_command(ctx.guild_id, name, "")
         except Exception as e:
-            self.bot.log.debug(f"{type(e)} {e}")
+            if isinstance(e, ClientResponseError) and e.code == 400:
+                await ctx.send(await self.bot._(ctx.guild_id, "slash", "too-many-tags"))
+                return
+            self.bot.log.warn(f"[add_tag] got the following exception {type(e)} {e}")
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
-        await self.db_add_command(cmd['id'], ctx.guild_id, name, desc, answer)
+        await self.db_add_command(cmd['id'], ctx.guild_id, name, "", answer)
         await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-created", name=name, answer=answer))
 
     async def remove_tag(self, ctx: SlashContext, name: str):
