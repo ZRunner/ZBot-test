@@ -1,7 +1,7 @@
 import logging
 import sys
 import time
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Optional, Protocol
 
 import discord
 import mysql
@@ -224,9 +224,12 @@ class zbot(commands.bot.AutoShardedBot):
                 return await cog.get_option(guildID, option)
             return cog.default_opt.get(option, None)
         return None
+
+    class TranslateMethod(Protocol):
+        async def __call__(self, identifier: Any, module: str, stringID: str, **kwargs) -> str: ...
     
     @property
-    def _(self) -> Callable[[Any, str, str], Coroutine[Any, Any, str]]:
+    def _(self) -> TranslateMethod:
         """Translate something"""
         cog = self.get_cog('Languages')
         if cog is None:
