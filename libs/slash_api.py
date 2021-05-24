@@ -235,6 +235,7 @@ class SlashCommand:
 class SlashMember:
     def __init__(self, data: dict[str, Any], bot: zbot):
         self.user = discord.User(data=data["user"], state=bot._connection)
+        self.id = data['user']['id']
         self.roles: list[int] = list(map(int, data['roles']))
         self.permissions = discord.Permissions(int(data['permissions']))
         self.nick: Optional[str] = data['nick']
@@ -319,9 +320,7 @@ class SlashContext:
         if hidden:
             base["flags"] = 64
 
-        initial_message = False
         if not self.responded:
-            initial_message = True
             if files and not self.deferred:
                 await self.defer(hidden=hidden)
             if self.deferred:
