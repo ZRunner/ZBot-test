@@ -1040,6 +1040,15 @@
         "xp_rate": "Modficateur de gains d'xp : {}",
         "xp_type": "Type de système d'xp : {}"
     },
+    "slash": {
+        "about": "Le système de tags de Zbot vous permet de facilement créer des tags (ou commandes personnalisées) pour votre serveur.\nEn une seule commande, vous pouvez créer un tag avec un nom et une réponse pré-définis, qui sera immédiatement disponible pour tous les utilisateurs de votre serveur !\nNotez que seul les membres ayant la permission de \"Gérer le serveur\" peuvent ajouter ou supprimer des tags.\n:warning: À cause d'une [restriction de Discord](<https://github.com/discord/discord-api-docs/issues/2381#issuecomment-754974673>), il est impossible d'aller à la ligne dans les réponses des tags :confused:\n\nPour pouvoir utiliser les tags de Zbot dans votre serveur sans inviter le bot complet : [Cliquez ici]({slashinvite})\nPour inviter Zbot en entier, avec toutes les commandes : [Cliquez ici]({botinvite})",
+        "already-exists": "Une commande existe déjà avec ce nom !",
+        "command-created": "La commande `/{name}` a bien été ajouté avec la réponse suivante :\n{answer}",
+        "command-deleted": "La commande `/{name}` a bien été supprimée",
+        "command-not-found": "Aucune commande n'existe avec ce nom !",
+        "deletion-failed": "Oups, quelque chose s'est mal passé lors de la suppression :confused:",
+        "only-one-word": "Le nom ne peut contenir qu'un seul mot !"
+    },
     "stats_infos": {
         "categ-0": "Catégorie",
         "categ-1": "Position",

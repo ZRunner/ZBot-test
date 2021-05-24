@@ -1,6 +1,7 @@
 import typing
 from typing import Any, Callable, Coroutine
 
+import discord
 from discord.ext import commands
 from libs.slash_api import SlashClient, SlashContext, SlashMember
 from utils import zbot
@@ -15,7 +16,8 @@ class Slash(commands.Cog):
         self._default_cmds = {
             'ping': self.ping,
             'add-tag': self.add_tag,
-            'remove-tag': self.remove_tag
+            'remove-tag': self.remove_tag,
+            'about-tags': self.tag_info
         }
 
     @commands.Cog.listener()
@@ -42,7 +44,7 @@ class Slash(commands.Cog):
             await fct(ctx, *args)
         except Exception as e:
             await self.on_slash_command_error(ctx, e)
-    
+
     async def parse_argument(self, arg: dict[str, str]) -> Any:
         if arg['type'] == 3:
             return arg['value']
@@ -62,7 +64,7 @@ class Slash(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command_error(self, ctx, err: Exception):
         self.bot.log.error("[on_slash_command] New error:", exc_info=err)
-    
+
     async def is_allowed(self, author: SlashMember) -> bool:
         """Check if a discord User is allowed to use /add-tag or /remove-tag"""
         return bool(author.permissions.manage_guild)
@@ -74,47 +76,46 @@ class Slash(commands.Cog):
     async def add_tag(self, ctx: SlashContext, name: str, answer: str):
         """Add a new custom tag in a guild"""
         if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
-            await ctx.send("Cette commande n'est pas disponible en MP !")
+            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"))
             return
         if not await self.is_allowed(ctx.author):
-            await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande !")
+            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"))
             return
         if len(name.split()) > 1:
-            await ctx.send("Le nom ne peut contenir qu'un seul mot !")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"))
             return
         check_exists = await self.db_get_command(ctx.guild_id, name)
         if check_exists is not None:
-            await ctx.send("Une commande existe déjà avec ce nom !")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
         check_discord_exists = await self.disc_get_command(ctx.guild_id, name)
-        print(check_discord_exists)
         desc = "something"
         try:
             cmd = await self.client.add_command(ctx.guild_id, name, desc)
         except Exception as e:
-            print(type(e), e)
-            await ctx.send("Une commande existe déjà avec ce nom !")
+            self.bot.log.debug(f"{type(e)} {e}")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
         await self.db_add_command(cmd['id'], ctx.guild_id, name, desc, answer)
-        await ctx.send(f"La commande `/{name}` a bien été ajouté avec la réponse suivante :\n{answer}")
+        await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-created", name=name, answer=answer))
 
     async def remove_tag(self, ctx: SlashContext, name: str):
         """Remove a custom tag from a guild"""
         if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
-            await ctx.send("Cette commande n'est pas disponible en MP !")
+            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"))
             return
         if not await self.is_allowed(ctx.author):
-            await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande !")
+            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"))
             return
         if len(name.split()) > 1:
-            await ctx.send("Le nom ne peut contenir qu'un seul mot !")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"))
             return
         cmd_id = None
         check_exists = await self.db_get_command(ctx.guild_id, name)
         if check_exists is None:
             check_discord_exists = await self.disc_get_command(ctx.guild_id, name)
             if check_discord_exists is None:
-                await ctx.send("Aucune commande n'existe avec ce nom !")
+                await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-not-found"))
                 return
             cmd_id = check_discord_exists['id']
         else:
@@ -122,9 +123,16 @@ class Slash(commands.Cog):
         if await self.disc_delete_command(ctx.guild_id, cmd_id):
             if check_exists:  # if it doesn't exist in our database, we don't need to delete it there
                 await self.db_delete_command(ctx.guild_id, cmd_id)
-            await ctx.send(f"La commande `/{name}` a bien été supprimée !")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-deleted", name=name))
         else:
-            await ctx.send("Oups, quelque chose s'est mal passé lors de la suppression !")
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "deletion-failed"))
+
+    async def tag_info(self, ctx: SlashContext):
+        """Get info about the tags system"""
+        botinvite = "<" + discord.utils.oauth_url(self.bot.user.id, scopes=['bot', 'applications.commands']) + ">"
+        slashinvite = "<" + discord.utils.oauth_url(self.bot.user.id, scopes=['applications.commands']) + ">"
+        ID = ctx.guild_id or ctx.author.id
+        await ctx.send(await self.bot._(ID, "slash", "about", slashinvite=slashinvite, botinvite=botinvite))
 
     async def custom_tag(self, ctx: SlashContext, *args, **kwargs):
         """Executes a custom command"""
