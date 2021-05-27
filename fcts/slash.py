@@ -1,4 +1,6 @@
+import re
 import typing
+import string
 from typing import Any, Callable, Coroutine
 
 import discord
@@ -18,6 +20,7 @@ class Slash(commands.Cog):
             'ping': self.ping,
             'add-tag': self.add_tag,
             'remove-tag': self.remove_tag,
+            'set-link': self.set_link,
             'about-tags': self.tag_info
         }
 
@@ -35,14 +38,14 @@ class Slash(commands.Cog):
             fct = self.global_cmds.get(cmd_id, self.custom_tag)
             ctx = SlashContext(msg['d'], self.client)
             if 'options' in msg['d']['data']:
-                args: list[Any] = [await self.parse_argument(a) for a in msg['d']['data']['options']]
+                args: dict[str, Any] = {a['name']: await self.parse_argument(a) for a in msg['d']['data']['options']}
             else:
-                args = list()
+                args = dict()
         except Exception as e:
             await self.bot.get_cog("Errors").on_error(e)
             return
         try:
-            await fct(ctx, *args)
+            await fct(ctx, **args)
         except Exception as e:
             await self.on_slash_command_error(ctx, e)
 
@@ -77,19 +80,23 @@ class Slash(commands.Cog):
     async def add_tag(self, ctx: SlashContext, name: str, answer: str):
         """Add a new custom tag in a guild"""
         if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
-            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"))
+            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"), hidden=True)
             return
         if not await self.is_allowed(ctx.author):
-            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"))
+            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"), hidden=True)
             return
         if len(name.split()) > 1:
-            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"))
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"), hidden=True)
+            return
+        name = ''.join([l for l in name.lower() if l in string.ascii_lowercase+string.digits])
+        if len(name) > 32 or len(name) < 2:
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "name-too-long"), hidden=True)
             return
         check_exists = await self.db_get_command(ctx.guild_id, name)
         if not check_exists:
             check_exists = await self.disc_get_command(ctx.guild_id, name)
         if check_exists is not None:
-            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"), hidden=True)
             return
         description = "A custom tag!"
         try:
@@ -99,7 +106,7 @@ class Slash(commands.Cog):
                 await ctx.send(await self.bot._(ctx.guild_id, "slash", "too-many-tags"))
                 return
             self.bot.log.warn(f"[add_tag] got the following exception {type(e)} {e}")
-            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"), hidden=True)
             return
         await self.db_add_command(cmd['id'], ctx.guild_id, name, description, answer)
         await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-created", name=name, answer=answer))
@@ -107,20 +114,20 @@ class Slash(commands.Cog):
     async def remove_tag(self, ctx: SlashContext, name: str):
         """Remove a custom tag from a guild"""
         if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
-            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"))
+            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"), hidden=True)
             return
         if not await self.is_allowed(ctx.author):
-            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"))
+            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"), hidden=True)
             return
         if len(name.split()) > 1:
-            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"))
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"), hidden=True)
             return
         cmd_id = None
         check_exists = await self.db_get_command(ctx.guild_id, name)
         if check_exists is None:
             check_discord_exists = await self.disc_get_command(ctx.guild_id, name)
             if check_discord_exists is None:
-                await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-not-found"))
+                await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-not-found"), hidden=True)
                 return
             cmd_id = check_discord_exists['id']
         else:
@@ -131,6 +138,43 @@ class Slash(commands.Cog):
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-deleted", name=name))
         else:
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "deletion-failed"))
+    
+    async def set_link(self, ctx: SlashContext, tag: str, label: str=None, url: str=None):
+        """Set (or reset) a link for a custom tag"""
+        if ctx.guild_id is None or not isinstance(ctx.author, SlashMember):
+            await ctx.send(await self.bot._(ctx.author.id, "errors", "DM"), hidden=True)
+            return
+        if not await self.is_allowed(ctx.author):
+            await ctx.send(await self.bot._(ctx.guild_id, "server", "need-manage-server"), hidden=True)
+            return
+        if len(tag.split()) > 1:
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "only-one-word"), hidden=True)
+            return
+        cmd_id = None
+        check_exists = await self.db_get_command(ctx.guild_id, tag)
+        if check_exists is None:
+            check_discord_exists = await self.disc_get_command(ctx.guild_id, tag)
+            if check_discord_exists is None:
+                await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-not-found"), hidden=True)
+                return
+            cmd_id = check_discord_exists['id']
+        else:
+            cmd_id = check_exists['ID']
+        if url:
+            regex_check = re.search(
+            r'(?P<https>https?)://(?:www\.)?(?P<domain>[^/\s]+)(?:/(?P<path>[\S]+))?', url)
+            if regex_check is None:
+                await ctx.send(await self.bot._(ctx.guild_id, "slash", "invalid-url"), hidden=True)
+                return
+        if label and len(label) > 80:
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "label-too-long"), hidden=True)
+            return
+        await self.db_update_command(cmd_id, link_label=label, link_url=url)
+        if url:
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "link-updated", name=tag))
+        else:
+            await ctx.send(await self.bot._(ctx.guild_id, "slash", "link-removed", name=tag))
+
 
     async def tag_info(self, ctx: SlashContext):
         """Get info about the tags system"""
@@ -150,7 +194,13 @@ class Slash(commands.Cog):
         answ = await self.db_get_command_id(int(ctx.command.id))
         if answ is None:
             return
-        await ctx.send(answ['answer'])
+        btns = []
+        if answ['link_url']:
+            link_label = answ.get('link_label')
+            if not link_label:
+                link_label = await self.bot._(ctx.guild_id, "slash", 'click-me')
+            btns.append(Button(5, link_label, url=answ['link_url']))
+        await ctx.send(answ['answer'], buttons=btns)
 
     async def db_get_commands(self, guildid: int) -> list[dict]:
         """Get the guild commands from the database"""
@@ -181,12 +231,23 @@ class Slash(commands.Cog):
         if len(res) == 0:
             return None
         return res[0]
+    
+    async def db_update_command(self, ID: int, **kwargs):
+        """Update a command"""
+        cursor = self.bot.cnx_frm.cursor(dictionary=True)
+        update = ', '.join('{}=%s'.format(k) for k in kwargs.keys())
+        args = list(kwargs.values()) + [ID]
+        cursor.execute(f"UPDATE slash_commands SET {update} WHERE ID = %s", args)
+        self.bot.cnx_frm.commit()
+        cursor.close()
 
-    async def db_add_command(self, ID: int, guildid: int, name: str, description: str, answer: str):
+    async def db_add_command(self, ID: int, guildid: int, name: str, description: str, answer: str, link: dict[str, str]=None):
         """Add a slash command into the database"""
         cursor = self.bot.cnx_frm.cursor()
-        cursor.execute("INSERT INTO slash_commands (`ID`, `guild`, `name`, `description`, `answer`) VALUES (%s, %s, %s, %s, %s)",
-                       (ID, guildid, name, description, answer))
+        link_label = link['link_label'] if link else None
+        link_url = link['link_url'] if link else None
+        cursor.execute("INSERT INTO slash_commands (`ID`, `guild`, `name`, `description`, `answer`, `link_label`, `link_url`) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                       (ID, guildid, name, description, answer, link_label, link_url))
         self.bot.cnx_frm.commit()
         cursor.close()
 

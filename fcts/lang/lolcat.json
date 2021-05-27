@@ -1030,12 +1030,18 @@
     "slash": {
         "about": "Zbot's tag system allows you to easily create tags (or custom commands) for your server.\nWith a single command, you can create a tag with a pre-defined name and response, which will be immediately available to all users of your server!\nNote that only members with \"Manage Server\" permission can add or remove tags.\n:warning: Due to a [Discord Restriction](<https://github.com/discord/discord-api-docs/issues/2381#issuecomment-754974673>), it is not possible to write multiline responses :confused:",
         "already-exists": "Uhh nope, u already got one of that!",
+        "click-me": "Hey! Look at me!",
         "command-created": "Ok cool, naw `/{name}` will answr with {answer}",
         "command-deleted": "roger, `/{name}` has been removed :catsalute:",
         "command-not-found": "Nope, i cant find anything with dat name!",
         "deletion-failed": "Ooops, smth broke :ohno:",
+        "invalid-url": "That url dont work!",
         "invite-slash": "If u wanna use cool tags only, click me!",
         "invite-bot": "If you wanna play with teh full bot, click me!",
+        "label-too-long": "Uhh nope, ur label is 2 long chief",
+        "link-removed": "OK, no moar link 4 `/{name}`",
+        "link-updated": "Alls good, `/{name}` naw haz a fancy link!",
+        "name-too-long": "Name too long, try again!",
         "only-one-word": "Hey, tags can only B one word! What did u expect srly",
         "too-many-tags": "Hey no, u already have wayyyy 2 many tags!"
     },
