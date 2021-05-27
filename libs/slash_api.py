@@ -4,6 +4,8 @@ from typing import Any, Optional, Union
 import discord
 import aiohttp
 import asyncio
+
+from discord.utils import to_json
 from utils import zbot
 
 class CustomRoute(discord.http.Route): # type: ignore
@@ -227,6 +229,45 @@ class SlashClient:
                     resp.raise_for_status()
                 return await resp.json()
 
+
+class Button:
+    styles = tuple(range(1, 6))
+
+    def __init__(self, style: int = 1, label: str = None, emoji: dict = None, url: str = None, disabled: bool = False, custom_id: str = None):
+        self.type = 2
+        if style not in self.styles:
+            raise ValueError('Style is not a valid button style')
+        self.style: int = style
+        self.custom_id: Optional[str] = custom_id
+        self.url: Optional[str] = url
+        self.disabled: bool = disabled
+        self.label: Optional[str] = label
+        self.emoji: Optional[discord.PartialEmoji] = None
+        if emoji:
+            try:
+                self.emoji = discord.PartialEmoji.from_dict(emoji)
+            except KeyError:
+                pass
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = {
+            'type': 2,
+            'style': int(self.style),
+            'label': self.label,
+            'disabled': self.disabled,
+        }
+        if self.custom_id:
+            payload['custom_id'] = self.custom_id
+
+        if self.url:
+            payload['url'] = self.url
+
+        if self.emoji:
+            payload['emoji'] = self.emoji.to_dict()
+
+        return payload
+
+
 class SlashCommand:
     def __init__(self, data: dict[str, str]):
         self.id: int = int(data['id'])
@@ -272,13 +313,10 @@ class SlashContext:
                    file: discord.File = None,
                    files: list[discord.File] = None,
                    allowed_mentions: discord.AllowedMentions = None,
-                   hidden: bool = False):
+                   hidden: bool = False,
+                   buttons: list[Button] = None):
         """
         Sends response of the slash command.
-        .. warning::
-            - Since Release 1.0.9, this is completely changed. If you are migrating from older version, please make sure to fix the usage.
-            - You can't use both ``embed`` and ``embeds`` at the same time, also applies to ``file`` and ``files``.
-            - If you send files in the initial response, this will defer if it's not been deferred, and then PATCH with the message
         :param content:  Content of the response.
         :type content: str
         :param embed: Embed of the response.
@@ -315,10 +353,12 @@ class SlashContext:
             "tts": tts,
             "embeds": [x.to_dict() for x in embeds] if embeds else [],
             "allowed_mentions": allowed_mentions.to_dict() if allowed_mentions
-            else self.bot.allowed_mentions.to_dict() if self.bot.allowed_mentions else {}
+            else self.bot.allowed_mentions.to_dict() if self.bot.allowed_mentions else {},
         }
         if hidden:
             base["flags"] = 64
+        if buttons:
+            base["components"] = [{'type': 1, 'components': [b.to_dict() for b in buttons]}]
 
         if not self.responded:
             if files and not self.deferred:
