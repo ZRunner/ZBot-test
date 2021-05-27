@@ -4,7 +4,7 @@ from typing import Any, Callable, Coroutine
 import discord
 from aiohttp.client_exceptions import ClientResponseError
 from discord.ext import commands
-from libs.slash_api import SlashClient, SlashContext, SlashMember
+from libs.slash_api import Button, SlashClient, SlashContext, SlashMember
 from utils import zbot
 
 
@@ -91,8 +91,9 @@ class Slash(commands.Cog):
         if check_exists is not None:
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
+        description = "A custom tag!"
         try:
-            cmd = await self.client.add_command(ctx.guild_id, name, "")
+            cmd = await self.client.add_command(ctx.guild_id, name, description)
         except Exception as e:
             if isinstance(e, ClientResponseError) and e.code == 400:
                 await ctx.send(await self.bot._(ctx.guild_id, "slash", "too-many-tags"))
@@ -100,7 +101,7 @@ class Slash(commands.Cog):
             self.bot.log.warn(f"[add_tag] got the following exception {type(e)} {e}")
             await ctx.send(await self.bot._(ctx.guild_id, "slash", "already-exists"))
             return
-        await self.db_add_command(cmd['id'], ctx.guild_id, name, "", answer)
+        await self.db_add_command(cmd['id'], ctx.guild_id, name, description, answer)
         await ctx.send(await self.bot._(ctx.guild_id, "slash", "command-created", name=name, answer=answer))
 
     async def remove_tag(self, ctx: SlashContext, name: str):
@@ -133,10 +134,16 @@ class Slash(commands.Cog):
 
     async def tag_info(self, ctx: SlashContext):
         """Get info about the tags system"""
-        botinvite = "<" + discord.utils.oauth_url(self.bot.user.id, scopes=['bot', 'applications.commands']) + ">"
-        slashinvite = "<" + discord.utils.oauth_url(self.bot.user.id, scopes=['applications.commands']) + ">"
         ID = ctx.guild_id or ctx.author.id
-        await ctx.send(await self.bot._(ID, "slash", "about", slashinvite=slashinvite, botinvite=botinvite))
+        slashinvite = discord.utils.oauth_url(
+            self.bot.user.id, scopes=['applications.commands'])
+        botinvite = discord.utils.oauth_url(
+            self.bot.user.id, scopes=['bot', 'applications.commands'])
+        tr_slashinvite = await self.bot._(ID, 'slash', 'invite-slash')
+        tr_botinvite = await self.bot._(ID, 'slash', 'invite-bot')
+        btn_slashinvite = Button(5, tr_slashinvite, url=slashinvite)
+        btn_botinvite = Button(5, tr_botinvite, url=botinvite)
+        await ctx.send(await self.bot._(ID, "slash", "about"), buttons=[btn_slashinvite, btn_botinvite])
 
     async def custom_tag(self, ctx: SlashContext, *args, **kwargs):
         """Executes a custom command"""
