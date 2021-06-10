@@ -107,10 +107,10 @@ class Fun(commands.Cog):
         ..Example roll Play Minecraft, play Star Citizens, do homeworks
         
         ..Doc fun.html#roll"""
-        liste = list(set([x for x in [x.strip() for x in options.split(',')] if len(x) > 0]))
-        if len(liste) == 0:
+        liste = [x for x in [x.strip() for x in options.split(',')] if len(x) > 0]
+        if len(set(liste)) == 0:
             return await ctx.send(await self.bot._(ctx.channel,"fun","no-roll"))
-        elif len(liste) == 1:
+        elif len(set(liste)) == 1:
             return await ctx.send(await self.bot._(ctx.channel,"fun","not-enough-roll"))
         # choosen = random.choice(liste).replace('@everyone','@​everyone').replace('@here','@​here')
         choosen = random.choice(liste)
