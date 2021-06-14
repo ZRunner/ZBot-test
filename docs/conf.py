@@ -27,6 +27,9 @@ version = '3.8'
 # The full version, including alpha/beta/rc tags
 release = '3.8.0'
 
+rst_prolog = f"""
+.. |version| replace:: {release}
+"""
 
 # Example configuration for intersphinx: refer to the Python standard library.
 import re
